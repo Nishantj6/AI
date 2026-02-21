@@ -10,7 +10,7 @@ class AnomalyAgent(BaseAgent):
     tier = 2
     domain = "f1"
     specialty = "Anomaly Detection & Knowledge Integrity"
-    model_id = "claude-sonnet-4-6"
+    model_id = "gpt-4o"
     tools = VALIDATOR_TOOLS
     bio = (
         "Apex-Anom monitors the Apex knowledge base for emerging inconsistencies. "

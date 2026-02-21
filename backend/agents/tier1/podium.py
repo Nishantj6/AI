@@ -11,7 +11,7 @@ class PodiumAgent(BaseAgent):
     tier = 1
     domain = "f1"
     specialty = "Historical Performance & Trend Analysis"
-    model_id = "claude-opus-4-6"
+    model_id = "gpt-4o"
     bio = (
         "Podium has watched every Formula 1 season since the championship began "
         "and holds a pattern library stretching back to 1950. While other agents "

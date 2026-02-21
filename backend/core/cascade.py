@@ -10,25 +10,38 @@ from backend.agents.tier2.validator import apex_val
 from backend.agents.tier2.anomaly import apex_anom
 
 
-async def knowledge_lookup(query: str, min_confidence: float, db: Session) -> List[dict]:
-    """Search validated knowledge facts — used by agents as a tool callback."""
+async def knowledge_lookup(
+    query: str, min_confidence: float, db: Session, tier: int = 1
+) -> List[dict]:
+    """Search validated knowledge facts — used by agents as a tool callback.
+    Tracks which tier (T2 or T3) accessed each fact for provenance display.
+    """
     query_lower = query.lower()
     facts = (
         db.query(KnowledgeFact)
-        .filter(
-            KnowledgeFact.confidence >= min_confidence,
-        )
+        .filter(KnowledgeFact.confidence >= min_confidence)
         .order_by(KnowledgeFact.confidence.desc())
         .limit(8)
         .all()
     )
-    # Simple keyword match
     matched = [
         f for f in facts
         if any(word in (f.title + f.content).lower() for word in query_lower.split())
     ]
     if not matched:
         matched = facts[:5]
+
+    # Increment lookup counters for T2 and T3 provenance tracking
+    if tier in (2, 3):
+        for f in matched[:5]:
+            if tier == 2:
+                f.t2_lookups = (f.t2_lookups or 0) + 1
+            else:
+                f.t3_lookups = (f.t3_lookups or 0) + 1
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
 
     return [
         {
@@ -51,7 +64,6 @@ async def validate_theory(theory_id: int, db: Session) -> dict:
     agent_row = db.query(Agent).filter(Agent.id == theory.agent_id).first()
     agent_name = agent_row.name if agent_row else "Unknown"
 
-    # Build validation context
     validation_prompt = f"""Please validate the following F1 theory submitted by {agent_name}:
 
 THEORY ID: {theory.id}
@@ -66,11 +78,10 @@ with the theory_id={theory.id} to record your verdict."""
     messages = [{"role": "user", "content": validation_prompt}]
 
     async def lookup(q: str, mc: float = 0.5):
-        return await knowledge_lookup(q, mc, db)
+        return await knowledge_lookup(q, mc, db, tier=2)
 
     response = await apex_val.respond_full(messages, knowledge_lookup=lookup)
 
-    # Parse verdict from response text
     verdict = "pending"
     if "validated" in response.lower() and "anomaly" not in response.lower():
         verdict = "validated"
@@ -79,11 +90,9 @@ with the theory_id={theory.id} to record your verdict."""
     elif "rejected" in response.lower():
         verdict = "rejected"
 
-    # Update theory status
     theory.status = verdict
     db.commit()
 
-    # If validated, create a KnowledgeFact
     if verdict == "validated":
         val_agent = db.query(Agent).filter(Agent.name == apex_val.name).first()
         fact = KnowledgeFact(
@@ -118,13 +127,13 @@ async def run_anomaly_scan(db: Session) -> List[dict]:
     )
 
     scan_prompt = (
-        f"Please scan these recent F1 knowledge facts for anomalies, "
-        f"contradictions, or data gaps:\n\n{facts_text}\n\n"
+        "Please scan these recent F1 knowledge facts for anomalies, "
+        "contradictions, or data gaps:\n\n" + facts_text + "\n\n"
         "For each anomaly found, produce a structured anomaly report."
     )
 
     async def lookup(q: str, mc: float = 0.5):
-        return await knowledge_lookup(q, mc, db)
+        return await knowledge_lookup(q, mc, db, tier=2)
 
     response = await apex_anom.respond_full(
         [{"role": "user", "content": scan_prompt}],

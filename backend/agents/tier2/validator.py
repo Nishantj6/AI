@@ -10,7 +10,7 @@ class ValidatorAgent(BaseAgent):
     tier = 2
     domain = "f1"
     specialty = "Theory Validation"
-    model_id = "claude-sonnet-4-6"
+    model_id = "gpt-4o"
     tools = VALIDATOR_TOOLS
     bio = (
         "Apex-Val is the Pitwall's chief fact-checker. Every theory submitted by "

@@ -499,3 +499,30 @@ button.btn-outline:hover { border-color: var(--accent); color: var(--accent); ba
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
 .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+
+/* ── Agent Feed ─────────────────────────────────────────────────── */
+.feed-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem 1rem;
+  transition: border-color 0.15s;
+}
+.feed-card:hover {
+  border-color: var(--accent);
+}
+.feed-filter {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  color: var(--text-muted);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.feed-filter:hover, .feed-filter.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}

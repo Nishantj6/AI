@@ -1,17 +1,17 @@
 """
 BaseAgent — shared logic for all Apex AI agents.
-Handles Claude API calls, tool use, and streaming.
+Handles OpenAI API calls, tool use, and streaming.
 """
 import json
 import asyncio
 from typing import AsyncIterator, Any, Optional, Callable
-import anthropic
+from openai import AsyncOpenAI
 from backend.config import get_settings
 
 settings = get_settings()
 
 
-# Tool definitions available to all agents
+# Tool definitions available to all agents (Anthropic input_schema format — converted below)
 KNOWLEDGE_TOOLS = [
     {
         "name": "search_knowledge_base",
@@ -95,9 +95,24 @@ VALIDATOR_TOOLS = [
 ]
 
 
+def _to_openai_tools(tools: list) -> list:
+    """Convert internal tool format (Anthropic-style) to OpenAI function calling format."""
+    return [
+        {
+            "type": "function",
+            "function": {
+                "name": t["name"],
+                "description": t["description"],
+                "parameters": t["input_schema"],
+            },
+        }
+        for t in tools
+    ]
+
+
 class BaseAgent:
     """
-    Wraps a Claude model call with Apex-specific tooling.
+    Wraps an OpenAI model call with Apex-specific tooling.
     Subclasses provide name, system_prompt, model_id, and tier.
     """
 
@@ -105,18 +120,13 @@ class BaseAgent:
     tier: int = 0
     domain: str = "f1"
     specialty: str = ""
-    model_id: str = "claude-opus-4-6"
+    model_id: str = "gpt-4o"
     bio: str = ""
     system_prompt: str = ""
     tools: list = KNOWLEDGE_TOOLS
 
     def __init__(self):
-        self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
-
-    def get_thinking_config(self) -> Optional[dict]:
-        if self.tier == 1:
-            return {"type": "adaptive"}
-        return None
+        self._client = AsyncOpenAI(api_key=settings.openai_api_key)
 
     def get_model(self) -> str:
         return self.model_id
@@ -129,67 +139,93 @@ class BaseAgent:
     ) -> AsyncIterator[str]:
         """
         Stream a response. Yields text chunks as they arrive.
-        Handles tool calls by dispatching to knowledge_lookup.
+        Handles tool calls by dispatching to the appropriate tool handler.
         """
         system = self.system_prompt
         if extra_context:
             system += f"\n\n--- CURRENT CONTEXT ---\n{extra_context}"
 
-        thinking = self.get_thinking_config()
-        create_kwargs: dict[str, Any] = {
-            "model": self.get_model(),
-            "max_tokens": 4096,
-            "system": system,
-            "messages": messages,
-            "tools": self.tools,
-        }
-        if thinking:
-            create_kwargs["thinking"] = thinking
+        oai_messages = [{"role": "system", "content": system}] + list(messages)
+        oai_tools = _to_openai_tools(self.tools)
 
         # Agentic tool-use loop with streaming
         while True:
-            collected_text = []
-            tool_calls = []
-            stop_reason = None
+            tool_calls_map: dict[int, dict] = {}
+            collected_text: list[str] = []
+            finish_reason = None
 
-            async with self._client.messages.stream(**create_kwargs) as stream:
-                async for event in stream:
-                    if event.type == "content_block_delta":
-                        if hasattr(event.delta, "text"):
-                            chunk = event.delta.text
-                            collected_text.append(chunk)
-                            yield chunk
-                    elif event.type == "content_block_stop":
-                        pass
+            stream = await self._client.chat.completions.create(
+                model=self.get_model(),
+                messages=oai_messages,
+                tools=oai_tools if oai_tools else None,
+                stream=True,
+            )
 
-                final = await stream.get_final_message()
-                stop_reason = final.stop_reason
+            async for chunk in stream:
+                choice = chunk.choices[0] if chunk.choices else None
+                if choice is None:
+                    continue
 
-                # Collect any tool use blocks from the final message
-                for block in final.content:
-                    if block.type == "tool_use":
-                        tool_calls.append(block)
+                delta = choice.delta
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
 
-            if stop_reason != "tool_use" or not tool_calls:
+                # Stream text content
+                if delta.content:
+                    collected_text.append(delta.content)
+                    yield delta.content
+
+                # Accumulate tool call deltas
+                if delta.tool_calls:
+                    for tc_delta in delta.tool_calls:
+                        idx = tc_delta.index
+                        if idx not in tool_calls_map:
+                            tool_calls_map[idx] = {"id": "", "name": "", "arguments": ""}
+                        if tc_delta.id:
+                            tool_calls_map[idx]["id"] = tc_delta.id
+                        if tc_delta.function:
+                            if tc_delta.function.name:
+                                tool_calls_map[idx]["name"] += tc_delta.function.name
+                            if tc_delta.function.arguments:
+                                tool_calls_map[idx]["arguments"] += tc_delta.function.arguments
+
+            if finish_reason != "tool_calls" or not tool_calls_map:
                 break
 
-            # Execute tool calls
-            tool_results = []
-            for tc in tool_calls:
-                result = await self._execute_tool(tc, knowledge_lookup)
-                tool_results.append({
-                    "type": "tool_result",
-                    "tool_use_id": tc.id,
+            # Build the assistant message with tool_calls
+            tool_calls_list = [
+                {
+                    "id": tool_calls_map[idx]["id"],
+                    "type": "function",
+                    "function": {
+                        "name": tool_calls_map[idx]["name"],
+                        "arguments": tool_calls_map[idx]["arguments"],
+                    },
+                }
+                for idx in sorted(tool_calls_map.keys())
+            ]
+
+            assistant_msg: dict[str, Any] = {
+                "role": "assistant",
+                "tool_calls": tool_calls_list,
+            }
+            if collected_text:
+                assistant_msg["content"] = "".join(collected_text)
+            oai_messages.append(assistant_msg)
+
+            # Execute each tool call and append results
+            for tc in tool_calls_list:
+                name = tc["function"]["name"]
+                try:
+                    inp = json.loads(tc["function"]["arguments"])
+                except json.JSONDecodeError:
+                    inp = {}
+                result = await self._execute_tool_by_name(name, inp, knowledge_lookup)
+                oai_messages.append({
+                    "role": "tool",
+                    "tool_call_id": tc["id"],
                     "content": result,
                 })
-
-            # Append assistant turn + tool results for next iteration
-            create_kwargs["messages"] = list(create_kwargs["messages"]) + [
-                {"role": "assistant", "content": final.content},
-                {"role": "user", "content": tool_results},
-            ]
-            # Clear thinking for subsequent turns (avoid double-thinking)
-            create_kwargs.pop("thinking", None)
 
     async def respond_full(
         self,
@@ -203,16 +239,14 @@ class BaseAgent:
             chunks.append(chunk)
         return "".join(chunks)
 
-    async def _execute_tool(self, tool_use, knowledge_lookup: Optional[Callable]) -> str:
-        name = tool_use.name
-        inp = tool_use.input if isinstance(tool_use.input, dict) else json.loads(tool_use.input)
-
+    async def _execute_tool_by_name(
+        self, name: str, inp: dict, knowledge_lookup: Optional[Callable]
+    ) -> str:
         if name == "search_knowledge_base" and knowledge_lookup:
             results = await knowledge_lookup(inp.get("query", ""), inp.get("min_confidence", 0.5))
             return json.dumps(results, indent=2)
 
         if name == "submit_theory":
-            # Return a receipt — actual persistence happens in the debate engine
             return json.dumps({
                 "status": "queued",
                 "message": f"Theory '{inp.get('title')}' queued for T2 validation.",

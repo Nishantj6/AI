@@ -11,7 +11,7 @@ class VectorAgent(BaseAgent):
     tier = 1
     domain = "f1"
     specialty = "Aerodynamics & Technical Analysis"
-    model_id = "claude-opus-4-6"
+    model_id = "gpt-4o"
     bio = (
         "Vector approaches F1 from the factory floor. With deep expertise in "
         "aerodynamic concepts, ground effect dynamics, and power unit architecture, "

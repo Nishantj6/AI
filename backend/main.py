@@ -16,6 +16,7 @@ from backend.api.debates import router as debates_router
 from backend.api.knowledge import router as knowledge_router
 from backend.api.award import router as award_router
 from backend.api.observers import router as observers_router
+from backend.api.loop import router as loop_router
 
 settings = get_settings()
 
@@ -25,11 +26,24 @@ def seed_agents(db):
     from backend.agents.tier1.oracle import oracle
     from backend.agents.tier1.vector import vector
     from backend.agents.tier1.podium import podium
+    from backend.agents.tier1.falcon import falcon
+    from backend.agents.tier1.sigma import sigma
+    from backend.agents.tier1.circuit import circuit
+    from backend.agents.tier1.regs import regs
+    from backend.agents.tier1.storm import storm
+    from backend.agents.tier1.ledger import ledger
+    from backend.agents.tier1.rival import rival
+    from backend.agents.tier1.pitwall import pitwall
+    from backend.agents.tier1.radar import radar
     from backend.agents.tier2.validator import apex_val
     from backend.agents.tier2.anomaly import apex_anom
     from backend.agents.tier3.learner import paddock_1, paddock_2, paddock_3
 
-    default_agents = [oracle, vector, podium, apex_val, apex_anom, paddock_1, paddock_2, paddock_3]
+    default_agents = [
+        oracle, vector, podium, falcon, sigma, circuit,
+        regs, storm, ledger, rival, pitwall, radar,
+        apex_val, apex_anom, paddock_1, paddock_2, paddock_3,
+    ]
 
     for agent in default_agents:
         existing = db.query(Agent).filter(Agent.name == agent.name).first()
@@ -62,8 +76,20 @@ async def lifespan(app: FastAPI):
         seed_news_events(db)
     finally:
         db.close()
+
+    # Start autonomous agent loop
+    from backend.core import autonomous_loop
+    from backend.core.broadcaster import broadcast_to_debate
+
+    async def _loop_broadcast(event: dict):
+        await broadcast_to_debate(event.get("debate_id", 0), event)
+
+    await autonomous_loop.start(_loop_broadcast)
+
     yield
-    # Shutdown (nothing to clean up for SQLite)
+
+    # Shutdown
+    await autonomous_loop.stop()
 
 
 app = FastAPI(
@@ -87,6 +113,7 @@ app.include_router(debates_router)
 app.include_router(knowledge_router)
 app.include_router(award_router)
 app.include_router(observers_router)
+app.include_router(loop_router)
 
 
 @app.get("/api/health")

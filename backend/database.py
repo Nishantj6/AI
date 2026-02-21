@@ -69,6 +69,9 @@ class DebateSession(Base):
     participant_ids = Column(Text, nullable=False)  # JSON list of agent ids
     status = Column(String(20), default="active")   # active/completed/archived
     summary = Column(Text, nullable=True)
+    verdict = Column(String(20), nullable=True)          # pass/draw/fail
+    verdict_scores = Column(Text, nullable=True)         # JSON {agent_name: score}
+    verdict_confidence = Column(Float, nullable=True)    # overall debate resolution %
     news_event_id = Column(Integer, ForeignKey("news_events.id"), nullable=True)
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
@@ -101,6 +104,8 @@ class KnowledgeFact(Base):
     confidence = Column(Float, default=0.9)
     tier_visibility = Column(Integer, default=3)    # min tier that can see this
     is_seed = Column(Boolean, default=False)        # seeded base facts
+    t2_lookups = Column(Integer, default=0)         # times T2 agents accessed this fact
+    t3_lookups = Column(Integer, default=0)         # times T3 agents accessed this fact
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

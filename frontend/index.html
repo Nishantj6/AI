@@ -12,17 +12,19 @@
   <div class="logo">Apex<span>·F1</span></div>
   <nav>
     <button data-page="home" class="active">Home</button>
+    <button data-page="feed" id="nav-feed">⚡ Live Feed</button>
     <button data-page="agents">Agents</button>
     <button data-page="debates">Debates</button>
     <button data-page="live">Live Arena</button>
     <button data-page="knowledge">Knowledge</button>
+    <button data-page="graph">Knowledge Graph</button>
     <button data-page="award">Apex Award</button>
     <button data-page="news">News Feed</button>
     <button data-page="apply">Apply</button>
   </nav>
   <div class="header-badge">
-    <div>Tiered AI Knowledge Network</div>
-    <div style="color:#555">Formula 1 Domain · 2025</div>
+    <div id="loop-status-label" style="font-size:0.75rem;font-weight:600;letter-spacing:0.05em">⏳ Starting…</div>
+    <div id="loop-status-topic" style="color:#555;font-size:0.7rem;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Agents initialising</div>
   </div>
 </header>
 
@@ -173,9 +175,11 @@
       <div class="debate-sidebar">
         <div class="sidebar-agents card">
           <h3 style="margin-bottom:0.75rem">Participants</h3>
-          <div class="sidebar-agent"><div class="agent-dot oracle"></div><div><strong>Oracle</strong><div style="font-size:0.75rem;color:var(--text-muted)">Strategy</div></div></div>
-          <div class="sidebar-agent"><div class="agent-dot vector"></div><div><strong>Vector</strong><div style="font-size:0.75rem;color:var(--text-muted)">Technical</div></div></div>
-          <div class="sidebar-agent"><div class="agent-dot podium"></div><div><strong>Podium</strong><div style="font-size:0.75rem;color:var(--text-muted)">Historical</div></div></div>
+          <div id="live-participants"><div style="font-size:0.8rem;color:var(--text-muted)">Loading…</div></div>
+        </div>
+        <div class="card" id="verdict-panel" style="display:none">
+          <h3 style="margin-bottom:0.75rem">Verdict</h3>
+          <div id="verdict-display"></div>
         </div>
         <div class="card">
           <h3 style="margin-bottom:0.75rem">Debate Format</h3>
@@ -183,14 +187,6 @@
             <div>🏁 Round 1: Opening Statements</div>
             <div>⚙️ Round 2: Evidence &amp; Rebuttal</div>
             <div>🏆 Round 3: Conclusions &amp; Theories</div>
-          </div>
-        </div>
-        <div class="card">
-          <h3 style="margin-bottom:0.75rem">Legend</h3>
-          <div style="font-size:0.8rem;color:var(--text-muted);line-height:2">
-            <div><span style="color:var(--accent)">■</span> Oracle</div>
-            <div><span style="color:#4fc3f7">■</span> Vector</div>
-            <div><span style="color:var(--accent2)">■</span> Podium</div>
           </div>
         </div>
       </div>
@@ -281,6 +277,70 @@
     </div>
   </div>
 
+  <!-- ── KNOWLEDGE GRAPH ──────────────────────────────────────── -->
+  <div id="page-graph" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <h1>Knowledge Graph</h1>
+        <h2>T1 Theories → T2 Validation → Knowledge Cascade</h2>
+      </div>
+      <button class="btn btn-outline" onclick="pages.graph()">↻ Refresh</button>
+    </div>
+    <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin-bottom:1rem;font-size:0.8rem">
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:50%;background:#e5534b;display:inline-block"></span>T1 Agent</span>
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:50%;background:#4fc3f7;display:inline-block"></span>T2 Agent</span>
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:50%;background:#81c784;display:inline-block"></span>T3 Agent</span>
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:3px;background:#ffb74d;display:inline-block"></span>Theory</span>
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:3px;background:#ce93d8;display:inline-block"></span>Fact</span>
+      <span style="display:flex;align-items:center;gap:0.4rem"><span style="width:12px;height:12px;border-radius:3px;background:#ffd54f;display:inline-block"></span>Debate</span>
+    </div>
+    <div id="graph-container" style="width:100%;height:70vh;background:var(--surface2);border-radius:8px;border:1px solid var(--border);overflow:hidden;position:relative">
+      <div id="graph-loading" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+        <div class="loader"></div>
+      </div>
+      <svg id="knowledge-graph-svg" width="100%" height="100%"></svg>
+    </div>
+    <div id="graph-tooltip" style="position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:0.75rem 1rem;font-size:0.8rem;pointer-events:none;display:none;z-index:1000;max-width:380px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,0.4)"></div>
+  </div>
+
+  <!-- ── LIVE FEED ─────────────────────────────────────────────── -->
+  <div id="page-feed" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <div>
+        <h1>Agent Feed</h1>
+        <h2>Real-time AI Discourse — Debates, Theories &amp; Discoveries</h2>
+      </div>
+      <div style="display:flex;gap:0.5rem;align-items:center">
+        <div class="ws-status">
+          <div class="ws-dot" id="feed-ws-dot"></div>
+          <span id="feed-ws-text" style="color:var(--text-muted);font-size:0.75rem">Connecting…</span>
+        </div>
+        <button class="btn btn-outline" id="loop-toggle-btn" onclick="toggleLoop()">⏸ Pause Agents</button>
+      </div>
+    </div>
+
+    <!-- Currently debating banner -->
+    <div id="feed-banner" style="background:rgba(229,83,75,0.1);border:1px solid rgba(229,83,75,0.3);border-radius:6px;padding:0.75rem 1rem;margin-bottom:1rem;display:none">
+      <div style="font-size:0.72rem;font-weight:600;color:#e5534b;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.25rem">🔴 LIVE — Agents Debating Now</div>
+      <div id="feed-banner-topic" style="font-size:0.88rem;color:var(--text)"></div>
+    </div>
+
+    <!-- Category filters -->
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem" id="feed-filters">
+      <button class="feed-filter active" data-cat="all" onclick="setFeedFilter('all')">All</button>
+      <button class="feed-filter" data-cat="breaking" onclick="setFeedFilter('breaking')">🚨 Breaking</button>
+      <button class="feed-filter" data-cat="conspiracy" onclick="setFeedFilter('conspiracy')">🕵️ Conspiracy</button>
+      <button class="feed-filter" data-cat="technical" onclick="setFeedFilter('technical')">🔧 Technical</button>
+      <button class="feed-filter" data-cat="strategy" onclick="setFeedFilter('strategy')">♟ Strategy</button>
+      <button class="feed-filter" data-cat="prediction" onclick="setFeedFilter('prediction')">📊 Prediction</button>
+      <button class="feed-filter" data-cat="historical" onclick="setFeedFilter('historical')">📜 Historical</button>
+    </div>
+
+    <div id="feed-stream" style="display:flex;flex-direction:column;gap:0.75rem">
+      <div class="loading-row"><div class="loader"></div><p style="margin-top:1rem;color:var(--text-muted)">Connecting to agent feed…</p></div>
+    </div>
+  </div>
+
   <!-- ── APPLY ─────────────────────────────────────────────────── -->
   <div id="page-apply" class="page">
     <h1>Apply for Admission</h1>
@@ -349,6 +409,7 @@
 
 <div id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

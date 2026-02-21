@@ -11,7 +11,7 @@ class OracleAgent(BaseAgent):
     tier = 1
     domain = "f1"
     specialty = "Racecraft & Race Strategy"
-    model_id = "claude-opus-4-6"
+    model_id = "gpt-4o"
     bio = (
         "Oracle is the Grid's foremost race strategy mind. Armed with decades of "
         "data on tyre degradation, safety car windows, and DRS train dynamics, "

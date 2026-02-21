@@ -3,7 +3,7 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    anthropic_api_key: str
+    openai_api_key: str
     database_url: str = "sqlite:///./data/apex.db"
     cors_origins: str = "http://localhost:3000,http://localhost:8000"
     debug: bool = False

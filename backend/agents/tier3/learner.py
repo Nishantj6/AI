@@ -23,7 +23,7 @@ LEARNER_TOOLS = [
 class LearnerAgent(BaseAgent):
     tier = 3
     domain = "f1"
-    model_id = "claude-haiku-4-5"
+    model_id = "gpt-4o-mini"
     tools = LEARNER_TOOLS
 
     def __init__(self, agent_name: str, number: int):
