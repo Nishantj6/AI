@@ -1,3 +1,4 @@
+from typing import Optional, List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/knowledge", tags=["knowledge"])
 def list_facts(
     domain: str = "f1",
     min_confidence: float = Query(0.0, ge=0.0, le=1.0),
-    is_seed: bool | None = None,
+    is_seed: Optional[bool] = None,
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db),
 ):
@@ -39,7 +40,7 @@ def list_facts(
 @router.get("/theories")
 def list_theories(
     domain: str = "f1",
-    status: str | None = None,
+    status: Optional[str] = None,
     limit: int = Query(30, le=100),
     db: Session = Depends(get_db),
 ):

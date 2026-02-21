@@ -1,3 +1,4 @@
+from typing import Optional, List
 """
 Evaluation Engine — runs tier admission tests for agent applicants.
 """
@@ -19,7 +20,7 @@ TESTS_BY_TIER = {1: TIER1_TESTS, 2: TIER2_TESTS, 3: TIER3_TESTS}
 async def score_answer(
     question: str,
     answer: str,
-    expected_keywords: list[str],
+    expected_keywords: List[str],
     max_score: int,
     evaluator,
 ) -> tuple[float, str]:

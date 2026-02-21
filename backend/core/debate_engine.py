@@ -5,7 +5,7 @@ Streams messages to WebSocket connections in real-time.
 import asyncio
 import json
 from datetime import datetime
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Optional, List
 from sqlalchemy.orm import Session
 
 from backend.database import (
@@ -35,9 +35,9 @@ DEBATE_ROUNDS = [
 async def run_debate(
     topic: str,
     db: Session,
-    news_event: NewsEvent | None = None,
-    participant_names: list[str] | None = None,
-    broadcast: Callable[[dict], Awaitable[None]] | None = None,
+    news_event: Optional[NewsEvent] = None,
+    participant_names: Optional[List[str]] = None,
+    broadcast: Optional[Callable] = None,
 ) -> DebateSession:
     """
     Run a full 3-round debate between T1 agents.
@@ -88,10 +88,10 @@ async def run_debate(
     await emit("debate_start", "system", f"Debate started: {topic}", 0)
 
     # Build conversation history per agent across rounds
-    conversation_histories: dict[str, list[dict]] = {n: [] for n in participant_names}
-    all_messages_so_far: list[str] = []
+    conversation_histories: dict[str, List[dict]] = {n: [] for n in participant_names}
+    all_messages_so_far: List[str] = []
 
-    submitted_theories: list[dict] = []
+    submitted_theories: List[dict] = []
 
     for round_key, round_label, round_num in DEBATE_ROUNDS:
         await emit("round_start", "system", round_label, round_num)
@@ -219,7 +219,7 @@ async def run_debate(
     return session
 
 
-async def trigger_debate_from_news(db: Session, broadcast=None) -> DebateSession | None:
+async def trigger_debate_from_news(db: Session, broadcast=None) -> Optional[DebateSession]:
     """Find the most recent unprocessed news event and trigger a debate."""
     from backend.core.news_feed import get_latest_unprocessed
 

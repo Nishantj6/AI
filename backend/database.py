@@ -73,7 +73,7 @@ class DebateSession(Base):
     started_at = Column(DateTime, default=datetime.utcnow)
     ended_at = Column(DateTime, nullable=True)
 
-    def get_participant_ids(self) -> list[int]:
+    def get_participant_ids(self) -> list:
         return json.loads(self.participant_ids)
 
 

@@ -1,3 +1,4 @@
+from typing import Optional, List
 import asyncio
 import json
 from datetime import datetime
@@ -27,8 +28,8 @@ async def broadcast_to_debate(debate_id: int, event: dict):
 
 
 class TriggerRequest(BaseModel):
-    topic: str | None = None
-    participants: list[str] | None = None
+    topic: Optional[str] = None
+    participants: Optional[List[str]] = None
 
 
 @router.get("")

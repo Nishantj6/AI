@@ -1,3 +1,4 @@
+from typing import Optional, List
 """
 News Feed — Mock F1 news event scheduler.
 Returns unprocessed events and marks them as processed.
@@ -45,7 +46,7 @@ def get_recent_events(db: Session, domain: str = "f1", limit: int = 20) -> list[
     )
 
 
-def mark_processed(db: Session, event_id: int, debate_id: int | None = None):
+def mark_processed(db: Session, event_id: int, debate_id: Optional[int] = None):
     event = db.query(NewsEvent).filter(NewsEvent.id == event_id).first()
     if event:
         event.processed = True

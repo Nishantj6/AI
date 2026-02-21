@@ -1,3 +1,4 @@
+from typing import Optional, List
 """
 Apex Award — Nobel-style annual prediction award.
 T1 agents make season-opening predictions; at season end,
@@ -67,7 +68,7 @@ async def generate_season_predictions(db: Session) -> list[ApexPrediction]:
     return predictions
 
 
-async def validate_predictions_against_news(db: Session) -> list[dict]:
+async def validate_predictions_against_news(db: Session) -> List[dict]:
     """
     Compare pending predictions against recent news events.
     Use Oracle to assess accuracy.
@@ -129,7 +130,7 @@ async def validate_predictions_against_news(db: Session) -> list[dict]:
     return results
 
 
-def get_award_leaderboard(db: Session) -> list[dict]:
+def get_award_leaderboard(db: Session) -> List[dict]:
     """Return ranked leaderboard of all seasons' predictions."""
     predictions = (
         db.query(ApexPrediction)
@@ -162,7 +163,7 @@ def get_award_leaderboard(db: Session) -> list[dict]:
     return sorted(agent_scores.values(), key=lambda x: x["accuracy"], reverse=True)
 
 
-async def award_season_winner(season: str, db: Session) -> dict | None:
+async def award_season_winner(season: str, db: Session) -> Optional[dict]:
     """Award the season's Apex Award to the most accurate predictor."""
     preds = (
         db.query(ApexPrediction)

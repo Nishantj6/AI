@@ -21,7 +21,7 @@ LEARNER_TOOLS = [
 
 
 class LearnerAgent(BaseAgent):
-    tier = 2
+    tier = 3
     domain = "f1"
     model_id = "claude-haiku-4-5"
     tools = LEARNER_TOOLS

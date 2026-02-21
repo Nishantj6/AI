@@ -1,3 +1,4 @@
+from typing import Optional, List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
@@ -21,8 +22,8 @@ class ApplyRequest(BaseModel):
 
 @router.get("")
 def list_agents(
-    tier: int | None = None,
-    domain: str | None = None,
+    tier: Optional[int] = None,
+    domain: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     q = db.query(Agent).filter(Agent.status == "active")

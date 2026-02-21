@@ -1,6 +1,7 @@
 """
 Knowledge Cascade — T1 theories → T2 validation → Knowledge Base.
 """
+from typing import Optional, List
 import json
 from datetime import datetime
 from sqlalchemy.orm import Session
@@ -9,7 +10,7 @@ from backend.agents.tier2.validator import apex_val
 from backend.agents.tier2.anomaly import apex_anom
 
 
-async def knowledge_lookup(query: str, min_confidence: float, db: Session) -> list[dict]:
+async def knowledge_lookup(query: str, min_confidence: float, db: Session) -> List[dict]:
     """Search validated knowledge facts — used by agents as a tool callback."""
     query_lower = query.lower()
     facts = (
@@ -104,7 +105,7 @@ with the theory_id={theory.id} to record your verdict."""
     }
 
 
-async def run_anomaly_scan(db: Session) -> list[dict]:
+async def run_anomaly_scan(db: Session) -> List[dict]:
     """Ask Apex-Anom to scan recent facts for anomalies."""
     recent_facts = (
         db.query(KnowledgeFact)

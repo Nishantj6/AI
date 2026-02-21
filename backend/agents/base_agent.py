@@ -4,7 +4,7 @@ Handles Claude API calls, tool use, and streaming.
 """
 import json
 import asyncio
-from typing import AsyncIterator, Any
+from typing import AsyncIterator, Any, Optional, Callable
 import anthropic
 from backend.config import get_settings
 
@@ -113,7 +113,7 @@ class BaseAgent:
     def __init__(self):
         self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
 
-    def get_thinking_config(self) -> dict | None:
+    def get_thinking_config(self) -> Optional[dict]:
         if self.tier == 1:
             return {"type": "adaptive"}
         return None
@@ -123,8 +123,8 @@ class BaseAgent:
 
     async def respond(
         self,
-        messages: list[dict],
-        knowledge_lookup: callable | None = None,
+        messages: list,
+        knowledge_lookup: Optional[Callable] = None,
         extra_context: str = "",
     ) -> AsyncIterator[str]:
         """
@@ -193,8 +193,8 @@ class BaseAgent:
 
     async def respond_full(
         self,
-        messages: list[dict],
-        knowledge_lookup: callable | None = None,
+        messages: list,
+        knowledge_lookup: Optional[Callable] = None,
         extra_context: str = "",
     ) -> str:
         """Collect full streamed response into a string."""
@@ -203,7 +203,7 @@ class BaseAgent:
             chunks.append(chunk)
         return "".join(chunks)
 
-    async def _execute_tool(self, tool_use, knowledge_lookup: callable | None) -> str:
+    async def _execute_tool(self, tool_use, knowledge_lookup: Optional[Callable]) -> str:
         name = tool_use.name
         inp = tool_use.input if isinstance(tool_use.input, dict) else json.loads(tool_use.input)
 
